@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Excursion Society - Explore Amazing Tours</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <div class="container">
+        <h1>🌍 Excursion Society</h1>
+        <nav>
+          <a href="#tours">Tours</a>
+          <a href="admin.html">Admin</a>
+        </nav>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="container">
+        <h1>Discover Amazing Excursions</h1>
+        <p>Explore the world's best tours with our excursion society</p>
+        <button class="btn-primary btn-large" id="view-tours">Browse Tours</button>
+      </div>
+    </section>
+
+    <main class="container">
+      <section id="tours">
+        <div class="section-title">
+          <h2>Available Tours</h2>
+        </div>
+        <div id="tours-list" class="tours-grid">
+          <div style="text-align: center; grid-column: 1 / -1; padding: 2rem;">
+            <p style="color: var(--text-light);">Loading tours...</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <template id="tour-template">
+      <div class="tour-card">
+        <div class="tour-card-header">
+          <h3 class="title"></h3>
+        </div>
+        <div class="tour-card-body">
+          <p class="desc"></p>
+          <div class="tour-meta">
+            <div class="tour-meta-item">
+              <div class="tour-meta-label">Price</div>
+              <div class="tour-meta-value">$<span class="price"></span></div>
+            </div>
+            <div class="tour-meta-item">
+              <div class="tour-meta-label">Date</div>
+              <div class="tour-meta-value"><span class="date"></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="tour-card-footer">
+          <button class="register btn-primary" style="flex-grow: 1;">Register Now</button>
+        </div>
+      </div>
+    </template>
+
+    <div id="register-modal" class="modal-overlay">
+      <div class="modal-content">
+        <h3>Register for Tour</h3>
+        <form id="register-form">
+          <input id="r-name" placeholder="Full Name" required style="display:block;width:100%;margin-bottom:1rem;" />
+          <input id="r-email" placeholder="Email Address" type="email" style="display:block;width:100%;margin-bottom:1rem;" />
+          <input id="r-phone" placeholder="Phone Number" style="display:block;width:100%;margin-bottom:1rem;" />
+          <label for="r-seats">Number of Seats:</label>
+          <input id="r-seats" type="number" min="1" value="1" style="display:block;width:100%;margin-bottom:1.5rem;" />
+          <div class="modal-buttons">
+            <button type="submit" class="btn-primary">Confirm Registration</button>
+            <button type="button" id="r-cancel" class="btn-danger">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <section id="confirmation" class="hidden">
+      <div class="container">
+        <div class="confirmation">
+          <h2>✓ Registration Confirmed</h2>
+          <p id="conf-text"></p>
+          <p style="margin-top: 1rem; font-size: 0.95rem;">A confirmation email has been sent to your email address.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <p>&copy; 2024 Excursion Society. All rights reserved. | <a href="#" style="color: inherit;">Privacy Policy</a></p>
+    </footer>
+
+    <script>
+      const API = 'http://localhost:5000';
+      async function loadTours(){
+        const res = await fetch(API + '/tours');
+        const tours = await res.json();
+        const list = document.getElementById('tours-list');
+        list.innerHTML = '';
+        if(!tours.length) list.innerHTML = '<em>No tours found</em>';
+        tours.forEach(t=>{
+          const tpl = document.getElementById('tour-template');
+          const node = tpl.content.cloneNode(true);
+          node.querySelector('.title').textContent = t.title;
+          node.querySelector('.desc').textContent = t.description;
+          node.querySelector('.price').textContent = t.price;
+          node.querySelector('.date').textContent = t.date || 'TBD';
+          const btn = node.querySelector('.register');
+          btn.addEventListener('click', ()=>openRegister(t.id, t.title, t.price));
+          list.appendChild(node);
+        })
+      }
+
+      let currentTour = null;
+      function openRegister(tourId, title, price){
+        currentTour = {tourId, title, price};
+        document.getElementById('register-modal').classList.remove('hidden');
+        document.getElementById('register-modal').classList.add('block');
+      }
+      document.getElementById('r-cancel').addEventListener('click', ()=>{
+        document.getElementById('register-modal').classList.remove('block');
+        document.getElementById('register-modal').classList.add('hidden');
+      })
+      document.getElementById('register-form').addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        const name = document.getElementById('r-name').value;
+        const email = document.getElementById('r-email').value;
+        const phone = document.getElementById('r-phone').value;
+        const seats = parseInt(document.getElementById('r-seats').value || '1');
+        const payload = { tourId: currentTour.tourId, seats, user: { name, email, phone } };
+        const res = await fetch(API + '/registrations', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        const data = await res.json();
+        document.getElementById('register-modal').classList.remove('block');
+        document.getElementById('register-modal').classList.add('hidden');
+        document.getElementById('confirmation').classList.remove('hidden');
+        document.getElementById('confirmation').classList.add('block');
+        document.getElementById('conf-text').textContent = `You registered ${name} for ${currentTour.title}. Total: $${data.total_price}`;
+      })
+
+      document.getElementById('view-tours').addEventListener('click', ()=>{
+        window.scrollTo({top: document.getElementById('tours').offsetTop, behavior:'smooth'});
+      })
+
+      window.addEventListener('load', loadTours);
+    </script>
+  </body>
+</html>
